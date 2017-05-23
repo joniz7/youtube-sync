@@ -7,16 +7,23 @@ const app = express();
 
 const WebSocket = require('ws');
 
-const wss = new WebSocket.Server({ port: 8081 });
+const server = new WebSocket.Server({ port: 8081, clientTracking: true });
+let clientId = 0;
 
-const connections = [];
+server.on('connection', function connection(socket, request) {
+  socket.send(JSON.stringify({id: ++clientId}));
+  console.log('client connected with id '+clientId);
+  socket.clientId = clientId;
 
-wss.on('connection', function connection(ws) {
-  ws.on('message', function incoming(message) {
-    connections.forEach( conn => conn.send(message));
+  socket.on('message', function incoming(message) {
+    console.log('got message', message);
+    server.clients.forEach(conn => {
+      console.log(conn.clientId, JSON.parse(message).clientId);
+      if(conn.clientId != JSON.parse(message).clientId) {
+        conn.send(message);
+      }
+    });
   });
-
-  connections.push(ws);
 });
 
 // Setup logger
